@@ -1,0 +1,299 @@
+---
+title: Módulo 5 Actividad 2
+subtitle: Modelos Lineales Generalizados
+author: Nicolás Bene
+output: pdf_document
+---
+
+# Descripción de la tarea
+Contamos con los datos de credit scoring de una entidad bancaria con los siguientes atributos:
+
+      * Status of existing checking account. 
+      * Duration in month. 
+      * Credit history. 
+      * Purpose. 
+      * Credit amount. 
+      * Savings account/bonds. 
+      * Present employment since. 
+      * Installment rate in percentage of disposable income. 
+      * Personal status and sex. 
+      * Other debtors / guarantors. 
+      * Present residence since. 
+      * Property. 
+      * Age in years. 
+      * Other installment plans. 
+      * Housing. 
+      * Number of existing credits at this bank. 
+      * Job. 
+      * Number of people being liable to provide maintenance for. 
+      * Telephone. 
+      * Foreign worker. 
+
+Primero que nada, cargo los paquetes a usar y las librerías que vienen en el script functions, a efectos de usar las funciones vistas durante el curso.:
+
+```{r librerias, message=F,warning=F}
+suppressPackageStartupMessages(library(tidyverse))
+suppressPackageStartupMessages(source("../Datos/Functions.R"))
+
+#Saco notación científica
+options(scipen=999)
+
+```
+
+
+Posteriormente cargo la base de datos. Agrego al read.table el argumento *stringsAsFactors = T* para que todas las categorías queden como factores.
+
+```{r carga de base}
+german_credit <- read.table("https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data", stringsAsFactors = T)
+
+colnames(german_credit) <-  c("chk_acct","duration","credit_his","purpose", "amount",
+         "saving_acct","present_emp","installment_rate","sex",
+         "other_debtor", "present_resid", "property","age",
+         "other_install","housing", "n_credits","job","n_people",
+         "telephone", "foreign", "response"
+         )
+
+german_credit$response <- german_credit$response-1
+german_credit$response <- as.factor(german_credit$response)
+
+```
+
+
+Realizo un *glimpse* y posteriormente un *summary* de los datos para poder comprender mejor a los mismos.
+```{r glimpse de los datos}
+
+german_credit %>% 
+    glimpse
+
+```
+Se observa que muchas de las variables son cualtitativas categóricas, las cuales se pasaron a factores para poder trabajar mejor. El resto de variables son todos números enteros.
+
+```{r summary de los datos}
+
+german_credit %>% 
+    summary
+
+```
+Se observa que no existen valores missing para ninguna variable. Por otra parte, en las variables categóricas hay códigos alfanuméricos que no permiten conocer a la perfección qué es lo que esta describiendo la variable. El significado de cada código puede verse en la descripción del dataset en [https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ](https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ). En función del diccionario de esa página web es que se analizan las variables en el dataset.
+
+Otro aspecto importante a resaltar es que, si se mira la variable response, el 30% de las observaciones (300 de las 1000) son créditos malos.
+
+Una vez visto a grandes rasgos el dataset, procedo a realizar lo solicitado por el ejercico.
+
+# 1) Propón un modelo lineal logit en el que la variable respuesta (crédito bueno=0, crédito malo=1), lo expliquen el resto de variables. 
+
+Realizo el modelo logit y miro el summary.
+
+```{r modelo logit}
+
+#Creo el modelo
+modelo_logit_1<-glm(response~.,data=german_credit,family=binomial(link="logit"))
+
+#Analizo el summary
+summary(modelo_logit_1)
+
+```
+Se observan que solo las variables chk_acctA13, chk_acctA14, duration, credit_hisA34, purposeA41,purposeA42, purposeA43, purposeA49, amount,saving_acctA64, saving_acctA65, installment_rate, sexA93, other_debtorA103, other_installA143 y foreignA202 son todas significativas con un alfa del 5%. Existen otras que son significativas con un alfa del 10%.
+
+# 2 Interpreta la variable duration. ¿Es significativa? ¿A partir de qué nivel de significación deja de ser significativa? 
+
+Según el diccionario de variables de la página web ya mencionada, duration es la duración en meses del crédito. 
+
+Analizando el summary del ejercicio 1, se observa que el p-value de esta variable es de 0.002724 (0.27%), lo que implica que es significativa con un alfa del 5%, así como un uno del 1%. Siguiendo con las señalizaciones de estrellas de R, dejaría de ser significativa con un nivel de significación del 0.1%.
+
+Algo importante a destacar es que la interpretación de los betas es distinta a la del modelo lineal. En este caso el 0.02786332 de la variable duration  indica el cambio en el logit asociado al cambio en una unidad en valor absoluto de la variable independiente duration. Esto es importante, ya que este coeficiente NO es el cambio que habrá en la probabilidad de que el crédito sea malo ante un cambio en la variable duration. Lo que sí se puede decir es que, al ser el beta de duration positivo, entonces si la duración en meses aumenta (baja) también se incrementará (disminuirá) la probabilidad de que el crédito sea malo. Esto tiene lógica, ya que si más meses pasan que no paga el deudor, es más probable que no lo haga.
+
+# 3 Si eliminamos la variable amount del modelo, ¿crees que alguna otra variable incrementaría el sesgo provocado por la falta de amount en el modelo? Es decir, identifica el sesgo en otra variable producido por eliminar la variable amount. 
+
+En el summary del modelo 1 se vio que la variable amount es significativa con un alfa del 5%. A continuación se analizará como cambian los coeficientes significativos ante la eliminación de la variable amount del modelo. 
+
+```{r modelo logit 2}
+
+#Creo el modelo
+modelo_logit_2<-glm(response~.,
+                    data=german_credit %>% 
+                              dplyr::select(-amount),
+                    family=binomial(link="logit"))
+
+#Analizo el summary
+summary(modelo_logit_2)
+
+```
+Una vez obtenido los coeficientes del segundo modelo, compararé estos con los correspondientes del primer modelo, enfocándome solo en las variables que son significativas para uno y otro modelo. Para eso obtengo los coeficientes y p valores de estos modelos.
+
+```{r variación de betas de modelos 1 y 2}
+
+#Paso vector de coeficientes modelo 1 a dataframe
+coeficientes_modelo_1 <- enframe(modelo_logit_1$coefficients) %>% 
+      #Cambio nombre de las columnas
+      rename(Variable=name,
+             Coeficiente_modelo_1=value
+      ) %>% 
+      #agrego el p_valor
+      inner_join(
+            summary(modelo_logit_1)$coefficients %>% 
+                  as_tibble(rownames = "Variable") %>% 
+                  dplyr::select(
+                        Variable,
+                        p_value_modelo_1=`Pr(>|z|)`
+                        
+                  )
+      ) %>% 
+      #saco intercepto y variables no significativas al 5%
+      dplyr::filter(
+            Variable!="(Intercept)"
+            )
+      
+
+
+coeficientes_modelo_2 <- 
+      #Paso vector de coeficientes modelo 1 a dataframe
+      enframe(modelo_logit_2$coefficients) %>% 
+            #Cambio nombre de las columnas
+            rename(Variable=name,
+                   Coeficiente_modelo_2=value
+                   ) %>% 
+        #agrego el p_valor
+      inner_join(
+            summary(modelo_logit_2)$coefficients %>% 
+                  as_tibble(rownames = "Variable") %>% 
+                  dplyr::select(
+                        Variable,
+                        p_value_modelo_2=`Pr(>|z|)`
+                  )
+      ) %>% 
+             #saco intercepto 
+            dplyr::filter(
+                  Variable!="(Intercept)"
+                  ) 
+
+
+#Uno los coeficientes de las variables significativas del modelo 1 con las mismas
+#variables del modelo 2 para comparar
+coeficientes_modelo <- coeficientes_modelo_1 %>% 
+                              #Uso inner así no considera la variable amount
+                              inner_join(coeficientes_modelo_2) %>% 
+                              #creo variable para ver si la variable es significativa
+                              #en cada modelo
+                              mutate(
+                                     es_significativa_en_modelo_1=
+                                          if_else(
+                                                p_value_modelo_1<=0.05,
+                                                "Sí",
+                                                "No"
+                                          ),
+                                    
+                                    es_significativa_en_modelo_2=
+                                          if_else(
+                                                p_value_modelo_2<=0.05,
+                                                "Sí",
+                                                "No"
+                                          )
+                              ) %>% 
+      #me quedo solo con los que son significativos en uno u otro modelo
+      dplyr::filter(
+            es_significativa_en_modelo_1=="Sí" | es_significativa_en_modelo_2=="Sí" 
+      )
+#Borro los dataframes intermedios
+rm(coeficientes_modelo_1, coeficientes_modelo_2)
+
+coeficientes_modelo <- coeficientes_modelo %>% 
+      mutate(Variacion_porcentual=(Coeficiente_modelo_2/Coeficiente_modelo_1-1)*100,
+             Variacion_absoluta=Coeficiente_modelo_2-Coeficiente_modelo_1
+             
+             )
+
+
+```
+Uniendo los coeficientes y p valores, lo primero que se observa es que al eliminar amount del modelo, hay dos variables que no eran significativas en el modelo 1 al 5%, y pasan a serlo en el modelo 2.
+
+```{r variables que pasan a ser significativas}
+coeficientes_modelo %>% 
+      dplyr::filter(es_significativa_en_modelo_1!=es_significativa_en_modelo_2) %>% 
+      dplyr::select(Variable,
+             p_value_modelo_1,es_significativa_en_modelo_1,
+             p_value_modelo_2,es_significativa_en_modelo_2)
+
+```
+Se trata de las variables credit_hisA33 y propertyA124, que de todas maneras su p valor no distaba demasiado del 5%.
+
+A continuación realizo un gráfico comparando los coeficientes del modelo 1 (con la variable amount) y el modelo 2 (sin la variable amount) para cada una de las variables que son significativas en uno u otro modelo
+
+```{r gráfico coeficientes,fig.width=8}
+coeficientes_modelo %>%
+      pivot_longer(cols = c(Coeficiente_modelo_1,Coeficiente_modelo_2),
+                   values_to = "Coeficientes",
+                   names_to = "Modelo") %>%
+      
+      ggplot(aes(x=Modelo,y=Coeficientes, fill=Modelo)) +
+      geom_col()+
+      facet_wrap(~Variable,scales = "free")+
+      scale_x_discrete(labels=c("Coeficiente_modelo_1" = "Modelo 1", 
+                              "Coeficiente_modelo_2" = "Modelo 2")
+      )+
+      ggtitle("Comparación de coeficientes entre modelos 1 y 2")+
+      theme(legend.position = "none",
+            title = element_text(size=14)
+            ) 
+     
+```
+Para tener un cálculo más exacto, también se analiza la variación porcentual entre los betas expuestos en el gráfico precedente.
+      
+```{r gráfico variación porcentual, fig.height=6}
+coeficientes_modelo %>% 
+      mutate(signo=as_factor(if_else(Variacion_porcentual>=0,1,0))) %>% 
+      ggplot(aes(Variable,Variacion_porcentual, fill = signo)) +
+      geom_col()+
+      coord_flip()+
+      ggtitle("Variación de betas entre modelo 1 y modelo 2 (con y sin amount)")+
+      ylab("Variación porcentual")+
+      scale_y_continuous(breaks = seq(-60,60,5), limits = c(-60,60))+
+      theme(legend.position = "none",
+            axis.text = element_text(size=11),
+            axis.title = element_text(size=11),
+            title = element_text(size=14)
+            
+            )
+     
+```
+
+Del análisis de los dos gráficos expuestos y de las variaciones de los betas, se observan que hay variaciones en prácticamente todas las variables, no obstante las más importantes son las de las variables **duration** (el coeficiente aumenta un 55% con respecto al primer modelo) e **installment rate** (el coeficiente disminuye un 32%). 
+
+De acuerdo al diccionario de la base de datos analizada, la variable **duration** es la duración en meses del préstamo, **installment rate** es la tasa de pago como porcentaje del ingreso de la persona, y **amount** es el monto del préstamo. Es evidente que la cantidad de meses por las que una empresa de crédito otorga el préstamo así como las cuotas y la tasa de interés a aplicar van a depender del monto de dicho préstamo. Por lo que es de esperar que exista cierta correlación entre estas variables, la cual se calcula a continuación. 
+
+```{r correlación entre variables}
+cor(
+      german_credit %>% 
+            dplyr::select(amount,installment_rate, duration )
+      
+      )
+
+```
+Se observa cierta correlación entre duration y amount, ya que es de 0.62, y está más cercano a uno que cero. Quizás sea por eso que es la variable significativa cuyo coeficiente más cambia al eliminar amount. En el caso de installment rate la correlación es bastante menor, pero no es exactamente 0.
+
+
+# 4 Identifica efectos no lineales en la variable duration y amount. Interpreta los nuevos resultados después de meter, en el modelo, estas no linealidades. 
+
+
+
+```{r}
+modelo_3<-earth(response~.,data=german_credit,glm=list(family=binomial(link=logit)))
+summary(modelo_3)
+```
+
+Se observa que el algoritmo no solo encuentra efectos no lineales en amount y duration, sino que también lo hace en installment_rate y en age.
+
+
+
+# 5 ¿Cuál es la probabilidad estimada media de que el crédito sea malo para mayores de 50 años? 
+
+```{r}
+german_credit$probabilidad_estimada <- modelo_logit_1$fitted.values 
+
+german_credit %>% 
+      dplyr::filter(age>50) %>% 
+      summarise(
+            mean(probabilidad_estimada)
+      )
+```
+
