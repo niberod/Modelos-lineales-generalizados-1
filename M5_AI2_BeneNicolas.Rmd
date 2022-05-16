@@ -33,7 +33,9 @@ Primero que nada, cargo los paquetes a usar y las librerías que vienen en el sc
 
 ```{r librerias, message=F,warning=F}
 suppressPackageStartupMessages(library(tidyverse))
+library(ROCit)
 suppressPackageStartupMessages(source("../Datos/Functions.R"))
+
 
 #Saco notación científica
 options(scipen=999)
@@ -43,7 +45,9 @@ options(scipen=999)
 Posteriormente cargo la base de datos. Agrego al read.table el argumento *stringsAsFactors = T* para que todas las categorías queden como factores.
 
 ```{r carga de base}
-german_credit <- read.table("https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data", stringsAsFactors = T)
+german_credit <- read.table(
+      "https://archive.ics.uci.edu/ml/machine-learning-databases/statlog/german/german.data",
+      stringsAsFactors = T)
 
 colnames(german_credit) <-  c("chk_acct","duration","credit_his","purpose", "amount",
          "saving_acct","present_emp","installment_rate","sex",
@@ -70,7 +74,7 @@ Se observa que muchas de las variables son cualtitativas categóricas, las cuale
 german_credit %>% 
     summary
 ```
-Se observa que no existen valores missing para ninguna variable. Por otra parte, en las variables categóricas hay códigos alfanuméricos que no permiten conocer a la perfección qué es lo que esta describiendo la variable. El significado de cada código puede verse en la descripción del dataset en [https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ](https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ). En función del diccionario de esa página web es que se analizan las variables en el dataset.
+Se observa que no existen valores missing para ninguna variable. Por otra parte, en las variables categóricas hay códigos alfanuméricos que no permiten conocer a la perfección qué es lo que esta describiendo la variable. El significado de cada código puede verse en la descripción del dataset en [https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ](https://archive.ics.uci.edu/ml/datasets/Statlog+(German+Credit+Data) ). En función del diccionario de esa página web es que se analizan en el presente ejercicio a las diferentes variables de la base.
 
 Otro aspecto importante a resaltar es que, si se mira la variable response, el 30% de las observaciones (300 de las 1000) son créditos malos.
 
@@ -89,23 +93,23 @@ modelo_logit_1<-glm(response~.,data=german_credit,family=binomial(link="logit"))
 summary(modelo_logit_1)
 
 ```
-Se observan que solo las variables chk_acctA13, chk_acctA14, duration, credit_hisA34, purposeA41,purposeA42, purposeA43, purposeA49, amount, saving_acctA64, saving_acctA65, installment_rate, sexA93, other_debtorA103, other_installA143 y foreignA202 son todas significativas con un alfa del 5%. 
+Se observan que solo las variables chk_acctA13, chk_acctA14, duration, credit_hisA34, purposeA41,purposeA42, purposeA43, purposeA49, amount, saving_acctA64, saving_acctA65, installment_rate, sexA93, other_debtorA103, other_installA143 y foreignA202 son significativas con un alfa del 5%. 
 
-# 2 Interpreta la variable duration. ¿Es significativa? ¿A partir de qué nivel de significación deja de ser significativa? 
+# 2) Interpreta la variable duration. ¿Es significativa? ¿A partir de qué nivel de significación deja de ser significativa? 
 
 Según el diccionario de variables de la página web ya mencionada, duration es la duración en meses del crédito. 
 
 Analizando el summary del ejercicio 1, se observa que el p-value de esta variable es de 0.002724 (0.27%), lo que implica que es significativa con un alfa del 5%, así como un uno del 1%. Siguiendo con las señalizaciones de estrellas de R, no sería significativa con un nivel de significación del 0.1%. Se puede decir también que dejaría de ser significativa para cualquier alfa menor a su p-valor, es decir cualquier alfa menor a 0.002724 (0.2724%).
 
-Algo importante a destacar es que la interpretación de los betas es distinta a la del modelo lineal. En este caso el 0.02786332 de la variable duration  indica el cambio en el logit asociado al cambio en una unidad en valor absoluto de la variable independiente duration. Esto es importante, ya que este coeficiente NO es el cambio que habrá en la probabilidad de que el crédito sea malo ante un cambio de un mes en la variable duration. Lo que sí se puede decir es que, al ser el beta de duration positivo, entonces si la duración en meses aumenta (baja) también se incrementará (disminuirá) la probabilidad de que el crédito sea malo.
+Algo importante a destacar es que la interpretación de los betas en un modelo de regresión logística es distinta a la del modelo lineal gaussiano. En este caso el beta 0.02786332 de la variable duration  indica el cambio en el logit asociado al cambio en una unidad en valor absoluto de la variable independiente duration. Esto es importante, ya que este coeficiente NO es el cambio que habrá en la probabilidad de que el crédito sea malo ante un cambio de un mes en la variable duration. Lo que sí se puede decir es que, al ser el beta de duration positivo, entonces si la duración en meses aumenta (baja) también se incrementará (disminuirá) la probabilidad de que el crédito sea malo.
 
-# 3 Si eliminamos la variable amount del modelo, ¿crees que alguna otra variable incrementaría el sesgo provocado por la falta de amount en el modelo? Es decir, identifica el sesgo en otra variable producido por eliminar la variable amount. 
+# 3) Si eliminamos la variable amount del modelo, ¿crees que alguna otra variable incrementaría el sesgo provocado por la falta de amount en el modelo? Es decir, identifica el sesgo en otra variable producido por eliminar la variable amount. 
 
 En el summary del modelo 1 se vio que la variable amount es significativa con un alfa del 5%. A continuación se analizará como cambian los coeficientes de las variables significativas ante la eliminación de la variable amount del modelo. 
 
 ```{r modelo logit 2}
 
-#Creo el modelo
+#Creo el modelo 2 sin amount
 modelo_logit_2<-glm(response~.,
                     data=german_credit %>% 
                               dplyr::select(-amount),
@@ -115,7 +119,7 @@ modelo_logit_2<-glm(response~.,
 summary(modelo_logit_2)
 
 ```
-Una vez obtenido los coeficientes del segundo modelo, compararé estos con los correspondientes del primer modelo, enfocándome solo en las variables que son significativas para uno y otro modelo. Para eso obtengo los coeficientes y p valores de cada uno.
+Una vez obtenido los coeficientes del segundo modelo, compararé estos con los correspondientes del primer modelo, enfocándome solo en las variables que son significativas. Para eso obtengo los coeficientes y p valores de cada uno.
 
 ```{r variación de betas de modelos 1 y 2}
 
@@ -186,7 +190,8 @@ coeficientes_modelo <- coeficientes_modelo_1 %>%
                                                 "No"
                                           )
                               ) %>% 
-                              #me quedo solo con los que son significativos en uno u otro modelo
+                              #me quedo solo con los que son significativos en 
+                              #uno u otro modelo
                               dplyr::filter(
                                           es_significativa_en_modelo_1=="Sí" |
                                           es_significativa_en_modelo_2=="Sí" 
@@ -210,13 +215,13 @@ Uniendo los coeficientes y p valores, lo primero que se observa es que al elimin
 coeficientes_modelo %>% 
       dplyr::filter(es_significativa_en_modelo_1!=es_significativa_en_modelo_2) %>% 
       dplyr::select(Variable,
-             p_value_modelo_1,es_significativa_en_modelo_1,
-             p_value_modelo_2,es_significativa_en_modelo_2)
+             p_value_modelo_1,
+             p_value_modelo_2)
 
 ```
 Se trata de las variables credit_hisA33 y propertyA124, que de todas maneras su p valor no distaba demasiado del 5% en el modelo 1.
 
-A continuación realizo un gráfico comparando los coeficientes del modelo 1 (con la variable amount) y el modelo 2 (sin la variable amount) para cada una de las variables que son significativas en uno u otro modelo
+A continuación realizo un gráfico comparando los coeficientes del modelo 1 (con la variable amount) y el modelo 2 (sin la variable amount) para cada una de las variables que son significativas en uno u otro modelo.
 
 ```{r gráfico coeficientes,fig.width=8}
 coeficientes_modelo %>%
@@ -238,7 +243,7 @@ coeficientes_modelo %>%
 ```
 Para tener un cálculo más exacto, también se analiza la variación porcentual entre los betas expuestos en el gráfico precedente.
       
-```{r gráfico variación porcentual, fig.height=6}
+```{r gráfico variación porcentual, fig.height=6,fig.width=10}
 coeficientes_modelo %>% 
       mutate(signo=as_factor(if_else(Variacion_porcentual>=0,1,0))) %>% 
       ggplot(aes(Variable,Variacion_porcentual, fill = signo)) +
@@ -268,10 +273,10 @@ cor(
       )
 
 ```
-Se observa cierta correlación positiva entre duration y amount, ya que es de 0.62, por lo qhe está más cercana a uno que cero. Quizás sea por eso que es la variable significativa cuyo coeficiente más cambia al eliminar amount. En el caso de installment rate tiene una correlación  negativa de -0.27, pero no es tan fuerte como en el caso de duration.
+Se observa cierta correlación positiva entre duration y amount, ya que es de 0.62, por lo qhe está más cercana a uno que a cero. Quizás sea por eso que es la variable significativa cuyo coeficiente más cambia al eliminar amount. En el caso de installment rate tiene una correlación  negativa de -0.27, pero no es tan fuerte como con duration.
 
 
-# 4 Identifica efectos no lineales en la variable duration y amount. Interpreta los nuevos resultados después de meter, en el modelo, estas no linealidades. 
+# 4) Identifica efectos no lineales en la variable duration y amount. Interpreta los nuevos resultados después de meter, en el modelo, estas no linealidades. 
 
 Para detectar efectos no lineales utilizaré un modelo de regresión logística con el algoritmo MARS, el cual establece puntos de corte para ciertas variables donde detecta no linealidades. En esos puntos de corte que encuentra, los betas cambian para una misma variable.
 
@@ -283,14 +288,16 @@ summary(modelo_logit_3)
 
 Se observa que el algoritmo no solo encuentra efectos no lineales en amount y duration, sino que también lo hace en installment_rate y en age. Por otra parte, el AIC de este modelo (```r round(modelo_logit_3[["glm.list"]][[1]][["aic"]],1)```) es mejor que el de los modelos 1 (```r round(AIC(modelo_logit_1),1)```)  y 2 (```r round(AIC(modelo_logit_2),1)```). Se debe recordar que el AIC castiga por la cantidad de variables agregadas, y el modelo earth expuesto en el summary anterior tiene solo 23 variables, mientras que el modelo 1 tenía 48 y el segundo 47. El algoritmo MARS realiza una selección de variables y se quedó solo con esas 23 variables mencionadas.
 
-En lo que respecta a las variables que solicita el ejercicio, se observa que hay 3 segmentos en la variable amount, los cuales pueden ser vistos gráficamente con el comando *plotmo*.
+Me enfocaré en analizar los efectos no lineales en las variables solicitadas por el ejercicio: amount y duration.
+
+En lo que respecta a la variable amount, se observa que hay 3 puntos de corte, los cuales pueden ser vistos gráficamente con el comando *plotmo*.
 
 ```{r efecto no lineal de amount}
 #Realizo el gráfico del efecto no lineal de amount
 plotmo(modelo_logit_3,type = "response", degree1=c( "amount")) 
 
 ```
-En el gráfico se observa entonces que hay un primer tramo donde crece la probabilidad de que el crédito sea malo a medida que aumenta el importe del crédito, luego aparece un punto de corte y sucede lo contrario: disminuye la probabilidad de que el crédito sea malo a medida que crece el monto prestado. El último segmento, que comienza en el monto 2978 es creciente con el monto del préstamo.
+En el gráfico se observa entonces que hay un primer tramo donde crece a cierto ritmo la probabilidad de que el crédito sea malo a medida que aumenta el importe del crédito. Se produce luego un punto de corte donde cambia la pendiente, pero la misma sigue siendo positiva. Posteriormente, aparece un nuevo punto de corte y sucede lo contrario: disminuye la probabilidad de que el crédito sea malo a medida que crece el monto prestado. El último segmento, que comienza en el monto 2978 presenta nuevamente una pendiente positiva, creciendo la probabilidad de que el crédito sea malo a medida que se incrementa el monto del préstamo.
 
 Podemos hacer el mismo análisis con la variable duration.
 
@@ -299,20 +306,20 @@ Podemos hacer el mismo análisis con la variable duration.
 plotmo(modelo_logit_3,type = "response", degree1=c( "duration")) 
 
 ```
-Aquí resulta claro, que hasta los 12 meses del préstamo el beta de duration es 0, y a partir del año el beta comienza a ser positivo, con lo que a mayor cantidad de meses de préstamo, es más probable que el crédito sea malo. Los primeros doce meses, entonces, no serían tan determinantes en la clasificación del préstamo.
+Aquí resulta claro que hasta los 12 meses del préstamo el beta de duration es 0, y a partir del año el beta comienza a ser positivo, con lo que a mayor cantidad de meses de préstamo, es más probable que el crédito sea malo. Los primeros doce meses, entonces, no serían tan determinantes en la clasificación del préstamo.
 
-# 5 ¿Cuál es la probabilidad estimada media de que el crédito sea malo para mayores de 50 años? 
+# 5) ¿Cuál es la probabilidad estimada media de que el crédito sea malo para mayores de 50 años? 
 
-En virtud de que el modelo hallado en el ejercicio 4 tenía un AIC mayor, y en que parece lógicas las no linealidades encontradas por el algoritmo MARS, me quedo con el mismo para contestar las preguntas 5 hasta la 7.
+En virtud de que el modelo hallado en el ejercicio 4 tenía un AIC menor a los modelos 1 y 2, y en que parecen lógicas las no linealidades encontradas por el algoritmo MARS, me quedo con el mismo para contestar las preguntas 5 hasta la 7.
 
-Procedo a calcular la probabilidad estimada media de que el crédito sea malo para los mayores de 50. Para ello hago la predicción de la probabilidad para todas las observaciones, y luego hallo la media de dicha predicción para las personas de más de 50 años.
+Procedo a calcular la probabilidad estimada media de que el crédito sea malo para los mayores de 50 años. Para ello utilizo el modelo para predecir la probabilidad para todas las observaciones, y luego hallo la media de dicha predicción para las personas de más de 50 años.
 
-```{r cálculo de probabilidad de crédito malo para mayores de 50}
+```{r cálculo de probabilidad de que el crédito sea malo para mayores de 50}
 
 #Hago la predicción de la probabilidad de que el crédito sea malo según el modelo
 german_credit$probabilidad_estimada <- predict(modelo_logit_3, type="response")
 
-#Calculo la media de la probabilidad de que el créditos sea malo para los mayores de 50
+#Calculo la media de la probabilidad de que el crédito sea malo para los mayores de 50
 german_credit %>% 
       dplyr::filter(age>50) %>% 
       summarise(
@@ -321,19 +328,19 @@ german_credit %>%
 ```
 La probabilidad promedio estimada por el modelo de que un crédito sea malo para personas de más de 50 años es de 28.2% aproximadamente.
 
-Esto es lo que predice el modelo, se puede hacer el cálculo de los datos reales, de cuál es la proporción de mayores de 50 con créditos malos.
+Esto es lo que predice el modelo, pero también se puede hacer el cálculo de los datos reales, de cuál es la proporción de mayores de 50 con créditos malos, a efectos de compararla con la probabilidad obtenida.
 
 ```{r proporción de créditos malos de más de 50 años}
 german_credit %>% 
       dplyr::filter(age>50) %>% 
-     count(response, name = "Frecuencia_absoluta") %>% 
+      count(response, name = "Frecuencia_absoluta") %>% 
       mutate(prop=Frecuencia_absoluta*100/sum(Frecuencia_absoluta)) %>% 
       janitor::adorn_totals()
 
 ```
-La proporción real de malos créditos de personas de más de 50 años es del 27,4%, por lo que vemos que la probabilidad media estimada por el modelo no está muy alejada de lo que realmente sucede. De todas formas esto es una muestra, habría que ver si se aplicase el modelo sobre otra muestra si esta aproximación sigue dándose, y no hay un problema de overfitting. Una solución a esto hubiera sido trabajar con una muestra de train y otra de test con el mismo dataset.
+La proporción real de malos créditos de personas de más de 50 años es del 27,4%, por lo que vemos que la probabilidad media estimada por el modelo no está muy alejada de lo que realmente sucede. De todas formas esto es una muestra, habría que ver si se aplicase el modelo sobre otra muestra si esta aproximación sigue dándose, y no hay un problema de overfitting. Una solución a esto hubiera sido trabajar con una muestra de train y otra de test con el mismo dataset, además de hacer cross validation.
 
-# 6 ¿Crees que hay discriminación de género en este último modelo creado?
+# 6) ¿Crees que hay discriminación de género en este último modelo creado?
 
 Para analizar si hay discriminación de género en el modelo 3, haré el summary nuevamente para ver cuáles fueron las variables con las que se quedó el modelo.
 
@@ -341,13 +348,15 @@ Para analizar si hay discriminación de género en el modelo 3, haré el summary
 summary(modelo_logit_3)
 ```
 
-El algoritmo MARS eliminó todas las variables de sexo al seleccionar el modelo, por lo que se puede decir que este modelo no presenta una discriminación explícita por género. Hubiera habido una discriminación explícita por género si en el mismo, por el hecho de ser mujer por ejemplo, el modelo asignara una mayor probabilidad de que el crédito sea malo. En ese caso si la empresa analizara con el modelo la posibilidad de darle el crédito a una mujer y a un hombre con las mismas características, sería posible que se lo otorgue al hombre y no a la mujer. Como la variable sexo no está especificada en el modelo en forma explícita esto no ocurre.
+El algoritmo MARS eliminó todas las variables de sexo al seleccionar el modelo, por lo que se puede decir que este modelo no presenta una discriminación explícita por género. Hubiera habido una discriminación explícita por género si en el mismo por el hecho de ser mujer por ejemplo, el modelo asignara una mayor probabilidad de que el crédito sea malo. En ese caso si la empresa prestamista analizara con el modelo la posibilidad de darle el préstamo a una mujer y a un hombre con todas las demás características iguales, sería posible que se lo otorgue al hombre y no a la mujer. Como la variable sexo no está especificada en el modelo en forma explícita esto no ocurre.
 
-No obstante esto no significa que el modelo esté totalmente libre de discriminación. Podría haber una discriminación implícita. Por ejemplo, el modelo resultante toma en cuenta los ahorros en las cuentas bancarias de la persona y puede suceder que, en virtud de la brecha salarial de género existente en el mercado laboral, las mujeres tengan en general menores ingresos y por ende menos ahorros que los hombres, y por lo tanto sean menos propensas a ser selectas para un crédito que los hombres. 
+No obstante esto no significa que el modelo esté totalmente libre de discriminación. Podría haber una discriminación implícita. Por ejemplo, el modelo resultante toma en cuenta los ahorros en las cuentas bancarias de la persona y puede suceder que, en virtud de la brecha salarial de género existente en el mercado laboral, las mujeres tengan en general menores ingresos y por ende menores ahorros que los hombres, y por lo tanto sean menos propensas a ser selectas para un crédito que los hombres. 
 
-Por otra parte, el modelo sí discrimina explicitamente a los extranjeros, ya que la variable foreignA202, que indica el hecho de que sean nacidos en Alemania, tiene un beta negativo. Por lo tanto el modelo le otorga mayor probabilidad de que un crédito sea malo a un extranjero, por más que tenga las mismas características de ingreso y de historial de buen pago que un nacional.
+Por otra parte, el modelo sí discrimina explicitamente a los extranjeros, ya que la variable foreignA202, que indica el hecho de que sean nacidos o no en Alemania, tiene un beta negativo. Por lo tanto el modelo le otorga mayor probabilidad de que un crédito sea malo a un extranjero, por más que tenga las mismas características de ingreso y de historial de buen pago que un nacional.
 
-# 7 Propón un modelo Ridge para modelizar el fenómeno crediticio. ¿Cuál es el lambda que minimiza el error? Compara este modelo con el logit que teníamos, anteriormente, con la curva ROC.
+# 7) Propón un modelo Ridge para modelizar el fenómeno crediticio. ¿Cuál es el lambda que minimiza el error? Compara este modelo con el logit que teníamos, anteriormente, con la curva ROC.
+
+A continuación especifico un modelo Ridge.
 
 ```{r modelo ridge,warning=FALSE,message=FALSE}
 #Fijo semilla
@@ -359,7 +368,7 @@ model <- model.matrix(
                         data = german_credit 
                         ) 
 
-
+#Ejecuto el modelo y hago un plot
 Ridge <- glmnet(x = model, 
                 y = german_credit$response, 
                 alpha = 0,
@@ -368,22 +377,23 @@ Ridge <- glmnet(x = model,
 plot(Ridge, label = TRUE, xvar = "lambda")
 
 ```
-Ahora realizaré k-fold cross validation para el modelo Ridge, usando 100 folds, a efectos de elegir el lambda óptimo.
+En el gráfico se observa como varían los coeficientes ante cambios en el valor de lambda (o mejor dicho el logaritmo neperiano de lambda). Para hallar el lambda óptimo realizaré k-fold cross validation para el modelo Ridge, usando 100 folds. Una vez obtenido el lambda óptimo, obtendré los coeficientes del modelo Ridge con dicho lambda.
 
-```{r results='asis', size="small",warning=FALSE,message=FALSE}
+```{r modelo Ridge con cross validation,warning=FALSE,message=FALSE}
 #Fijo semilla
 set.seed(123)
 
+#Hago el modelo Ridge con cross validation
 Ridge2 <- cv.glmnet(x = model, 
                     y = german_credit$response, 
                     alpha = 0,
                     nfolds = 100,
                     family = binomial(link="logit"))
 
-
+#Hago el plot del modelo para ver el lambda óptimo
 plot(Ridge2)
 ```
-Se observa en el gráfico que el logaritmo del lambda mínimo es de aproximadamente `r round(log(Ridge2$lambda.min),1)`, lo que equivale a que el lambda sea de `r round(Ridge2$lambda.min,3)`. Este lambda mínimo y los coeficientes resultantes con dicho lambda se presentan a continuación.
+Se observa en el gráfico que el logaritmo del lambda mínimo es de aproximadamente `r round(log(Ridge2$lambda.min),1)`, lo que equivale a que el lambda sea de `r round(Ridge2$lambda.min,3)`. Este lambda mínimo y los coeficientes resultantes con dicho lambda se calculan a continuación.
 
 ```{r lambda mínimo y coeficientes del modelo Ridge con ese lambda}
 #Muestro el lambda mínimo
@@ -403,14 +413,19 @@ pander(
       split.cell = 80, split.table = Inf)
 ```
 
-Resta comparar el modelo Ridge con el modelo creado con el algoritmo MARS y ver cuál de los dos tiene una mejor predicción. Para eso uso el área bajo la curva ROC
+Resta comparar el modelo Ridge con el lambda óptimo con el modelo creado con el algoritmo MARS, y ver cuál de los dos tiene una mejor predicción. Para eso uso el área bajo la curva ROC, ya que estamos ante un problema de clasificación (clasificar al crédito concedido a la persona como malo o bueno), y el área mencionada es una métrica que permite sintetizar la sensibilidad y especificidad de los modelos para distintos cortes de probabilidad de que el crédito sea malo (distintos cortes entre 0 y 1). Será mejor, entonces, aquel modelo con mayor área bajo la curva ROC. A continuación calculo dicha área, llamada AUC por sus siglas en inglés (Area Under the Curve).
 
-```{r, warning=FALSE}
+```{r área bajo la curva ROC para modelo earth y Ridge, warning=FALSE}
 
 ###Hago las predicciones###
 
 #Con modelo earth
-pred_earth <- predict(modelo_logit_3,german_credit,type="response")
+pred_earth <- predict(
+                      modelo_logit_3,
+                      german_credit,
+                      type="response"
+                      )
+
 #Con modelo Ridge
 pred_ridge <- predict(
             Ridge,
@@ -419,29 +434,52 @@ pred_ridge <- predict(
             newx=model
       )
 
-###Calculo valor de área bajo la curva ROC###
+###Calculo valor del área bajo la curva ROC###
 
 #Modelo earth
-suppressMessages(auc(german_credit$response, pred_earth))
+paste(
+      "AUC modelo earth: ",
+            round(
+                  suppressMessages(
+                        auc(german_credit$response, 
+                            pred_earth)
+                        ),
+                  3)
+            )
 
 #Modelo Ridge
-suppressMessages(auc(german_credit$response, pred_ridge))
+paste(
+      "AUC modelo Ridge: ",
+      round(
+            suppressMessages(
+                  auc(german_credit$response, 
+                      pred_ridge
+                      )
+                  ),
+            3)
+      )
+
 ```
-El modelo Ridge present una mayor área bajo la curva ROC, por lo que tiene una mejor capacidad de predicción.
+El modelo Ridge presenta una mayor área bajo la curva ROC, por lo que tiene una mejor capacidad de predicción para clasificar a un crédito como malo.
+
+Estas curvas ROC pueden verse visualmente de la siguiente forma:
 
 ```{r grafico curvas ROC}
-library(ROCit)
 
+#Fijo cuadrícula para hacer los dos plots pegados
 par(mfrow=c(1, 2))
 
+#Creo objeto curva ROC
 curva_ROC_earth <- rocit(pred_earth[,1],german_credit$response)
 curva_ROC_ridge <- rocit(pred_ridge[,1] ,german_credit$response)
 
+#Hago plot de curva ROC de modelo earth
 plot(curva_ROC_earth)
 title("Curva ROC para modelo Earth")
 
+#Hago plot de curva ROC de modelo Ridge
 plot(curva_ROC_ridge)
 title("Curva ROC para modelo Ridge")
 ```
 
-
+Concluimos entonces que el modelo Ridge presenta una mejor capacidad de predicción que el modelo earth con el algoritmo MARS. 
